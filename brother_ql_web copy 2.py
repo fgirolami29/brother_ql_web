@@ -173,7 +173,13 @@ def image_to_png_bytes(im):
 def print_text():
     """
     API to print a label
+
+    returns: JSON
+
+    Ideas for additional URL parameters:
+    - alignment
     """
+
     return_dict = {'success': False}
 
     try:
@@ -190,27 +196,22 @@ def print_text():
     if bottle.DEBUG:
         im.save('sample-out.png')
 
-    # Determine if red printing is supported for the label size
-    red = False
-    if 'red' in context['label_size']:
-        red = True  # Enable red if supported by the label size
-
-    # Set rotation based on the label kind and orientation
     if context['kind'] == ENDLESS_LABEL:
         rotate = 0 if context['orientation'] == 'standard' else 90
     elif context['kind'] in (ROUND_DIE_CUT_LABEL, DIE_CUT_LABEL):
         rotate = 'auto'
 
-    # Create the label using the BrotherQLRaster object
     qlr = BrotherQLRaster(CONFIG['PRINTER']['MODEL'])
+    red = False
+    if 'red' in context['label_size']:
+        red = True
     create_label(qlr, im, context['label_size'], red=red, threshold=context['threshold'], cut=True, rotate=rotate)
 
-    # Send the label to the printer backend
     if not bottle.DEBUG:
         try:
             be = BACKEND_CLASS(CONFIG['PRINTER']['PRINTER'])
             for i in range(context['label_count']):
-                logger.info('Printing label %d of %d ...', i + 1, context['label_count'])
+                logger.info('Printing label %d of %d ...', i, context['label_count'])
                 be.write(qlr.data)
             be.dispose()
             del be
@@ -220,10 +221,8 @@ def print_text():
             return return_dict
 
     return_dict['success'] = True
-    if DEBUG:
-        return_dict['data'] = str(qlr.data)
+    if DEBUG: return_dict['data'] = str(qlr.data)
     return return_dict
-
 
 def main():
     global DEBUG, FONTS, BACKEND_CLASS, CONFIG
